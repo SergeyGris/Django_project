@@ -2,7 +2,6 @@ from django.urls import path
 from mainapp import views
 from mainapp.apps import MainappConfig
 
-
 app_name = MainappConfig.name
 
 urlpatterns = [
@@ -14,4 +13,6 @@ urlpatterns = [
     path("news/", views.NewsView.as_view(), name="news"),
     path("news/<int:page>/", views.NewsWithPaginatorView.as_view(),
          name="news_paginator"),
+    path("courses/<int:pk>/", views.CoursesDetailView.as_view(),
+         name="courses_detail",),
 ]

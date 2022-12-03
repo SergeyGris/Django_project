@@ -1,13 +1,9 @@
-import json
 
-from django.conf import settings
-from django.db import models
-from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import  HttpResponseRedirect
 from django.views.generic import TemplateView
-from datetime import datetime
+from django.shortcuts import get_object_or_404
 
-from mainapp.models import News
+from mainapp.models import News, Courses, CourseTeachers, Lesson
 
 
 class ContactsView(TemplateView):
@@ -43,6 +39,25 @@ class ContactsView(TemplateView):
 class CoursesView(TemplateView):
     template_name = 'mainapp/courses_list.html'
 
+
+class CoursesListView(TemplateView):
+    template_name = "mainapp/courses_list.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(CoursesListView, self).get_context_data(**kwargs)
+        context["objects"] = Courses.objects.all()[:7]
+        return context
+
+
+class CoursesDetailView(TemplateView):
+    template_name = "mainapp/courses_detail.html"
+
+    def get_context_data(self, pk=None, **kwargs):
+        context = super(CoursesDetailView, self).get_context_data(**kwargs)
+        context["course_object"] = get_object_or_404(Courses, pk=pk)
+        context["lessons"] = Lesson.objects.filter(course=context["course_object"])
+        context["teachers"] = CourseTeachers.objects.filter(course=context["course_object"])
+        return context
 
 class DocSiteView(TemplateView):
     template_name = 'mainapp/doc_site.html'

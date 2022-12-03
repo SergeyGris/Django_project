@@ -44,9 +44,17 @@ class News(BaseModel):
         ordering = ('-created_at',)
 
 
+class CoursesManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
 class Courses(BaseModel):
+    objects = CoursesManager()
+
     name = models.CharField(max_length=256, verbose_name="Name")
-    description = models.TextField(verbose_name="Description", **NULLABLE)
+    description = models.TextField(verbose_name="Description", blank=True,
+                                   null=True)
     description_as_markdown = models.BooleanField(verbose_name="As markdown",
                                                   default=False)
     cost = models.DecimalField(max_digits=8, decimal_places=2,
@@ -75,11 +83,13 @@ class Lesson(BaseModel):
         verbose_name_plural = 'уроки'
 
 
-class CourseTeachers(BaseModel):
+class CourseTeachers(models.Model):
     course = models.ManyToManyField(Courses)
     name_first = models.CharField(max_length=128, verbose_name="Name")
     name_second = models.CharField(max_length=128, verbose_name="Surname")
     day_birth = models.DateField(verbose_name="Birth date")
+    deleted = models.BooleanField(default=False)
+
 
     def __str__(self) -> str:
         return "{0:0>3} {1} {2}".format(self.pk, self.name_second,
