@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'social_django',
+    'crispy_forms',
     'mainapp',
     'authapp',
 ]
@@ -55,7 +56,7 @@ ROOT_URLCONF = 'my_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -67,9 +68,7 @@ TEMPLATES = [
                 'social_django.context_processors.login_redirect'
 
             ],
-            'libraries': {
-                'email_to_link': 'mainapp.templatetags.email_to_link',
-            },
+
         },
 
     },
@@ -148,3 +147,5 @@ AUTHENTICATION_BACKENDS = (
 
 SOCIAL_AUTH_GITHUB_KEY = '383db329d27be549e29a'
 SOCIAL_AUTH_GITHUB_SECRET = 'f97d4653e9a055bcb95fb38bf8db95eadf1679af'
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'

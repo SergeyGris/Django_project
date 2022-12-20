@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.db import models
 
 NULLABLE = {"blank": True, "null": True}
@@ -44,13 +45,13 @@ class News(BaseModel):
         ordering = ('-created_at',)
 
 
-class CoursesManager(models.Manager):
+class CourseManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(is_deleted=False)
 
 
-class Courses(BaseModel):
-    objects = CoursesManager()
+class Course(BaseModel):
+    objects = CourseManager()
 
     name = models.CharField(max_length=256, verbose_name="Name")
     description = models.TextField(verbose_name="Description", blank=True,
@@ -65,9 +66,13 @@ class Courses(BaseModel):
     def __str__(self) -> str:
         return f"{self.pk} {self.name}"
 
+    class Meta:
+        verbose_name = 'Курс'
+        verbose_name_plural = 'Курсы'
+
 
 class Lesson(BaseModel):
-    course = models.ForeignKey(Courses, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
     num = models.PositiveIntegerField(verbose_name="Lesson number")
     title = models.CharField(max_length=256, verbose_name="Name")
     description = models.TextField(verbose_name="Description", **NULLABLE)
@@ -83,14 +88,35 @@ class Lesson(BaseModel):
         verbose_name_plural = 'уроки'
 
 
-class CourseTeachers(models.Model):
-    course = models.ManyToManyField(Courses)
+class CourseTeacher(models.Model):
+    course = models.ManyToManyField(Course)
     name_first = models.CharField(max_length=128, verbose_name="Name")
     name_second = models.CharField(max_length=128, verbose_name="Surname")
     day_birth = models.DateField(verbose_name="Birth date")
     deleted = models.BooleanField(default=False)
 
-
     def __str__(self) -> str:
         return "{0:0>3} {1} {2}".format(self.pk, self.name_second,
                                         self.name_first)
+
+
+class CourseFeedback(BaseModel):
+    RATING_FIVE = 5
+    RATINGS = (
+        (RATING_FIVE, '⭐⭐⭐⭐⭐'),
+        (4, '⭐⭐⭐⭐'),
+        (3, '⭐⭐⭐'),
+        (2, '⭐⭐'),
+        (1, '⭐'),
+    )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, verbose_name='Пользователь')
+    rating = models.PositiveSmallIntegerField(choices=RATINGS, default=RATING_FIVE, verbose_name='Рейтинг')
+    feedback = models.TextField(verbose_name='Отзыв', default='Без отзыва')
+
+    class Meta:
+        verbose_name = ''
+        verbose_name_plural = ''
+
+    def __str__(self):
+        return f'Отзыв на {self.course} от {self.user}'

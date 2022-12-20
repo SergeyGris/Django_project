@@ -3,11 +3,13 @@
 {% block content %}
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+
+
         <p>
             <input type="text" name="username" autofocus="" autocapitalize="none" autocomplete="username"
                    maxlength="150" class="textinput textInput form-control" required="" id="id_username" placeholder="Username">
         </p>
-         <p>
+        <p>
             <input type="password" name="password1" autocomplete="current-password" maxlength="150"
                    class="textinput textInput form-control" required="" id="id_password1" placeholder="Password">
         </p>
@@ -16,7 +18,7 @@
                    class="textinput textInput form-control" required="" id="id_password2" placeholder="Password confirm">
         </p>
         <p>
-            <input type="text" name="email" autocapitalize="none" maxlength="150" class="form-control" required="" id ='id_email'
+            <input type="text" name="email" autocapitalize="none" maxlength="150" class="form-control" required="" id='id_email'
                    placeholder="email">
         </p>
         <p>
