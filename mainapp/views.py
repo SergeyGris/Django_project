@@ -1,12 +1,22 @@
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.http import HttpResponseRedirect, HttpResponseNotFound, JsonResponse
+import logging
+
+from django.conf import settings
+from django.contrib.auth.mixins import PermissionRequiredMixin, \
+    UserPassesTestMixin, LoginRequiredMixin
+from django.core.cache import cache
+from django.http import HttpResponseRedirect, HttpResponseNotFound, \
+    JsonResponse, FileResponse
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
-from django.views.generic import TemplateView, ListView, UpdateView, DetailView, DeleteView, CreateView
+from django.views import View
+from django.views.generic import TemplateView, ListView, UpdateView, \
+    DetailView, DeleteView, CreateView
 from django.shortcuts import get_object_or_404
 
 from mainapp.forms import CourseFeedbackForm
 from mainapp.models import News, Course, CourseTeacher, Lesson, CourseFeedback
+
+logger = logging.getLogger(__name__)
 
 
 class ContactsView(TemplateView):
@@ -54,31 +64,44 @@ class CoursesListView(ListView):
 
 
 class CourseDetailView(TemplateView):
-    template_name = 'mainapp/courses_detail.html'
+    template_name = "mainapp/courses_detail.html"
 
-    def get_context_data(self, **kwargs):
-        context_data = super(CourseDetailView, self).get_context_data(**kwargs)
-        context_data['course_object'] = get_object_or_404(Course, pk=self.kwargs.get('pk'))
-        context_data['lessons'] = Lesson.objects.filter(course=context_data['course_object'])
-        context_data['teachers'] = CourseTeacher.objects.filter(course=context_data['course_object'])
-        context_data['feedback_list'] = CourseFeedback.objects.filter(course=context_data['course_object'])
+    def get_context_data(self, pk=None, **kwargs):
+        logger.debug("Yet another log message")
+        context = super(CourseDetailView, self).get_context_data(**kwargs)
+        context["course_object"] = get_object_or_404(Course, pk=pk)
+        context["lessons"] = Lesson.objects.filter(course=context["course_object"])
+        context["teachers"] = CourseTeacher.objects.filter(course=context["course_object"])
+        if not self.request.user.is_anonymous:
+            if not CourseFeedback.objects.filter(
+                    course=context["course_object"], user=self.request.user
+            ).count():
+                context["feedback_form"] = CourseFeedbackForm(
+                    course=context["course_object"], user=self.request.user
+                )
 
-        if self.request.user.is_authenticated:
-            context_data['feedback_form'] = CourseFeedbackForm(
-                course=context_data['course_object'],
-                user=self.request.user
+        cached_feedback = cache.get(f"feedback_list_{pk}")
+        if not cached_feedback:
+            context["feedback_list"] = (
+                CourseFeedback.objects.filter(course=context["course_object"])
+                    .order_by("-created", "-rating")[:5]
+                    .select_related()
             )
-        return context_data
+            cache.set(f"feedback_list_{pk}", context["feedback_list"], timeout=300)  # 5 minutes
+        else:
+            context["feedback_list"] = cached_feedback
+
+        return context
 
 
-class CourseFeedbackCreateView(CreateView):
+class CourseFeedbackFormProcessView(LoginRequiredMixin, CreateView):
     model = CourseFeedback
     form_class = CourseFeedbackForm
 
     def form_valid(self, form):
         self.object = form.save()
-        rendered_template = render_to_string('mainapp/includes/feedback_card.html', context={'item'})
-        return JsonResponse({'card': rendered_template})
+        rendered_card = render_to_string("mainapp/includes/feedback_card.html", context={"item": self.object})
+        return JsonResponse({"card": rendered_card})
 
 
 class DocSiteView(TemplateView):
@@ -121,3 +144,26 @@ class NewsDeleteView(PermissionRequiredMixin, DeleteView):
     fields = '__all__'  # для отображения всех полей в модели
     success_url = reverse_lazy('mainapp:news')
     permission_required = ('mainapp.delete_news',)
+
+
+class LogView(TemplateView):
+    template_name = "mainapp/log_view.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(LogView, self).get_context_data(**kwargs)
+        log_slice = []
+        with open(settings.LOG_FILE, "r") as log_file:
+            for i, line in enumerate(log_file):
+                if i == 1000:  # first 1000 lines
+                    break
+                log_slice.insert(0, line)  # append at start
+            context["log"] = "".join(log_slice)
+        return context
+
+
+class LogDownloadView(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def get(self, *args, **kwargs):
+        return FileResponse(open(settings.LOG_FILE, "rb"))
